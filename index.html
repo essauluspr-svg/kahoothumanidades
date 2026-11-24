@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kahoot: El valor de la experiencia humana</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #46178f;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .pantalla { display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
+  .activa { display: flex; }
+
+  /* Inicio */
+  h1 { font-size: clamp(1.8rem, 5vw, 3rem); margin-bottom: 10px; }
+  .sub { opacity: .85; margin-bottom: 30px; font-size: 1.1rem; }
+  input {
+    padding: 14px 18px; font-size: 1.2rem; border-radius: 8px; border: none;
+    width: min(320px, 90vw); text-align: center; margin-bottom: 16px; font-weight: bold;
+  }
+  .btn {
+    background: #fff; color: #46178f; font-weight: 800; font-size: 1.2rem;
+    padding: 14px 40px; border: none; border-radius: 8px; cursor: pointer;
+    box-shadow: 0 4px 0 rgba(0,0,0,.3); transition: transform .1s;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.3); }
+
+  /* Pregunta */
+  #pregunta { justify-content: flex-start; padding: 0; }
+  .barra-sup {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; font-weight: bold; font-size: 1.1rem;
+  }
+  .caja-pregunta {
+    background: #fff; color: #333; width: 100%; padding: 24px 20px;
+    font-size: clamp(1.3rem, 3.5vw, 2rem); font-weight: 800; box-shadow: 0 2px 6px rgba(0,0,0,.2);
+  }
+  .centro { flex: 1; display: flex; align-items: center; justify-content: center; gap: 30px; width: 100%; padding: 20px; }
+  .reloj {
+    width: 90px; height: 90px; border-radius: 50%; background: #864cbf;
+    display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 800;
+  }
+  .reloj.urgente { background: #e21b3c; animation: latido .5s infinite alternate; }
+  @keyframes latido { to { transform: scale(1.1); } }
+  .barra-tiempo { width: 100%; height: 8px; background: rgba(255,255,255,.2); }
+  .barra-tiempo div { height: 100%; background: #fff; width: 100%; transition: width 1s linear; }
+
+  .opciones {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; padding: 10px;
+  }
+  .opcion {
+    display: flex; align-items: center; gap: 14px; padding: 22px 18px; border: none; border-radius: 6px;
+    color: #fff; font-size: clamp(1rem, 2.5vw, 1.4rem); font-weight: 700; text-align: left; cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,.25); min-height: 90px; transition: opacity .3s, transform .1s;
+  }
+  .opcion:hover { filter: brightness(1.08); }
+  .opcion:active { transform: translateY(3px); }
+  .opcion svg { width: 40px; height: 40px; flex-shrink: 0; }
+  .rojo { background: #e21b3c; } .azul { background: #1368ce; }
+  .amarillo { background: #d89e00; } .verde { background: #26890c; }
+  .opcion.apagada { opacity: .25; }
+  .opcion.correcta { outline: 5px solid #fff; }
+  .opcion:disabled { cursor: default; }
+
+  /* Resultado de pregunta */
+  .resultado {
+    position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 800; gap: 14px; z-index: 10; text-align: center; padding: 20px;
+  }
+  .resultado.bien { display: flex; background: rgba(38,137,12,.95); }
+  .resultado.mal { display: flex; background: rgba(226,27,60,.95); }
+  .resultado .icono { font-size: 5rem; }
+  .resultado .pts { background: rgba(0,0,0,.25); padding: 10px 24px; border-radius: 8px; font-size: 1.5rem; }
+  .resultado .racha { font-size: 1.1rem; opacity: .9; }
+
+  /* Final */
+  .podio { background: #fff; color: #46178f; border-radius: 12px; padding: 30px; width: min(420px, 92vw); margin: 20px 0; }
+  .podio .grande { font-size: 3rem; font-weight: 900; }
+  .resumen { text-align: left; width: min(600px, 95vw); margin-bottom: 20px; }
+  .resumen li { list-style: none; background: rgba(255,255,255,.12); margin: 6px 0; padding: 10px 14px; border-radius: 6px; font-size: .95rem; }
+
+  @media (max-width: 600px) {
+    .opciones { grid-template-columns: 1fr; }
+    .opcion { min-height: 64px; padding: 14px; }
+    .reloj { width: 64px; height: 64px; font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA 1: INICIO -->
+<section id="inicio" class="pantalla activa">
+  <h1>El valor de la experiencia humana</h1>
+  <p class="sub">10 preguntas · 20 segundos cada una · ¡Responde rápido para ganar más puntos!</p>
+  <input id="nombre" type="text" placeholder="Tu nombre" maxlength="20">
+  <button class="btn" onclick="iniciar()">¡Jugar!</button>
+</section>
+
+<!-- PANTALLA 2: PREGUNTA -->
+<section id="pregunta" class="pantalla">
+  <div class="barra-sup">
+    <span id="contador">1 de 10</span>
+    <span id="puntaje">0 pts</span>
+  </div>
+  <div class="barra-tiempo"><div id="barraTiempo"></div></div>
+  <div class="caja-pregunta" id="textoPregunta"></div>
+  <div class="centro">
+    <div class="reloj" id="reloj">20</div>
+  </div>
+  <div class="opciones" id="opciones"></div>
+</section>
+
+<!-- CAPA DE RESULTADO -->
+<div class="resultado" id="resultado">
+  <div class="icono" id="resIcono"></div>
+  <div id="resTexto"></div>
+  <div class="pts" id="resPuntos"></div>
+  <div class="racha" id="resRacha"></div>
+</div>
+
+<!-- PANTALLA 3: FINAL -->
+<section id="final" class="pantalla">
+  <h1>¡Juego terminado!</h1>
+  <div class="podio">
+    <div id="finNombre" style="font-size:1.4rem;font-weight:700"></div>
+    <div class="grande" id="finPuntos"></div>
+    <div id="finAciertos"></div>
+    <div id="finMensaje" style="margin-top:10px;font-weight:700"></div>
+  </div>
+  <ul class="resumen" id="resumen"></ul>
+  <button class="btn" onclick="location.reload()">Jugar otra vez</button>
+</section>
+
+<script>
+// ====== 1. LAS PREGUNTAS ======
+// "correcta" es el índice de la respuesta correcta: 0 = A, 1 = B, 2 = C, 3 = D
+const preguntas = [
+  { p: "¿Qué es un paradigma?", o: ["Una emoción", "Un modelo de interpretación", "Una ley", "Una experiencia"], correcta: 1 },
+  { p: "¿Qué construye nuestra identidad?", o: ["La suerte", "El dinero", "Nuestras experiencias", "La edad"], correcta: 2 },
+  { p: "¿Qué estudia la filosofía?", o: ["Solo los números", "Los deportes", "Los animales", "Cuestiones fundamentales de la existencia"], correcta: 3 },
+  { p: "¿Qué caracteriza al paradigma racional?", o: ["El pensamiento", "La fuerza", "La apariencia", "El miedo"], correcta: 0 },
+  { p: "¿Qué nos permite aprender de los errores?", o: ["La indiferencia", "La reflexión", "La suerte", "La imaginación"], correcta: 1 },
+  { p: "¿Qué estudia el paradigma social?", o: ["La genética", "Los planetas", "La convivencia humana", "Las emociones únicamente"], correcta: 2 },
+  { p: "¿Dos personas pueden interpretar una misma experiencia de manera diferente?", o: ["Nunca", "Sí", "Solamente los adultos", "Es imposible"], correcta: 1 },
+  { p: "¿Qué caracteriza al paradigma existencial?", o: ["La apariencia", "La riqueza", "La popularidad", "La libertad y el sentido de la vida"], correcta: 3 },
+  { p: "¿Qué es la empatía?", o: ["Comprender los sentimientos de otros", "Imponer opiniones", "Ignorar emociones", "Evitar problemas"], correcta: 0 },
+  { p: "¿Por qué es valiosa la experiencia humana?", o: ["Porque evita todos los errores", "Porque garantiza el éxito", "Porque nos permite aprender y transformarnos", "Porque todos pensamos igual"], correcta: 2 }
+];
+
+// ====== 2. CONFIGURACIÓN ======
+const TIEMPO = 20;          // segundos por pregunta
+const PUNTOS_MAX = 1000;    // puntos por responder al instante
+const colores = ["rojo", "azul", "amarillo", "verde"];
+const figuras = [           // triángulo, rombo, círculo, cuadrado (como Kahoot)
+  '<svg viewBox="0 0 40 40"><polygon points="20,4 37,35 3,35" fill="#fff"/></svg>',
+  '<svg viewBox="0 0 40 40"><polygon points="20,2 38,20 20,38 2,20" fill="#fff"/></svg>',
+  '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="17" fill="#fff"/></svg>',
+  '<svg viewBox="0 0 40 40"><rect x="5" y="5" width="30" height="30" fill="#fff"/></svg>'
+];
+
+// ====== 3. ESTADO DEL JUEGO ======
+let actual = 0, puntos = 0, aciertos = 0, racha = 0;
+let restante = TIEMPO, intervalo = null, respondida = false;
+let jugador = "Jugador";
+const historial = [];
+
+const $ = id => document.getElementById(id);
+
+function mostrar(id) {
+  document.querySelectorAll(".pantalla").forEach(s => s.classList.remove("activa"));
+  $(id).classList.add("activa");
+}
+
+function iniciar() {
+  jugador = $("nombre").value.trim() || "Jugador";
+  mostrar("pregunta");
+  cargarPregunta();
+}
+
+// ====== 4. MOSTRAR UNA PREGUNTA ======
+function cargarPregunta() {
+  const q = preguntas[actual];
+  respondida = false;
+  $("contador").textContent = `${actual + 1} de ${preguntas.length}`;
+  $("puntaje").textContent = `${puntos} pts`;
+  $("textoPregunta").textContent = q.p;
+
+  const cont = $("opciones");
+  cont.innerHTML = "";
+  q.o.forEach((texto, i) => {
+    const b = document.createElement("button");
+    b.className = `opcion ${colores[i]}`;
+    b.innerHTML = figuras[i] + `<span>${texto}</span>`;
+    b.onclick = () => responder(i);
+    cont.appendChild(b);
+  });
+
+  // Temporizador
+  restante = TIEMPO;
+  actualizarReloj();
+  clearInterval(intervalo);
+  intervalo = setInterval(() => {
+    restante--;
+    actualizarReloj();
+    if (restante <= 0) responder(-1); // se acabó el tiempo
+  }, 1000);
+}
+
+function actualizarReloj() {
+  $("reloj").textContent = restante;
+  $("reloj").classList.toggle("urgente", restante <= 5);
+  $("barraTiempo").style.width = (restante / TIEMPO * 100) + "%";
+}
+
+// ====== 5. CUANDO EL JUGADOR RESPONDE ======
+function responder(elegida) {
+  if (respondida) return;
+  respondida = true;
+  clearInterval(intervalo);
+
+  const q = preguntas[actual];
+  const esCorrecta = elegida === q.correcta;
+  let ganados = 0;
+
+  if (esCorrecta) {
+    // Fórmula tipo Kahoot: más rápido = más puntos (mínimo la mitad)
+    ganados = Math.round(PUNTOS_MAX * (1 - (TIEMPO - restante) / TIEMPO / 2));
+    racha++;
+    if (racha >= 3) ganados += 100; // bono por racha
+    puntos += ganados;
+    aciertos++;
+  } else {
+    racha = 0;
+  }
+
+  historial.push({ p: q.p, ok: esCorrecta, correcta: q.o[q.correcta] });
+
+  // Resaltar la respuesta correcta y apagar las demás
+  document.querySelectorAll(".opcion").forEach((b, i) => {
+    b.disabled = true;
+    if (i === q.correcta) b.classList.add("correcta");
+    else b.classList.add("apagada");
+  });
+
+  // Mostrar capa de resultado
+  const r = $("resultado");
+  r.className = "resultado " + (esCorrecta ? "bien" : "mal");
+  $("resIcono").textContent = esCorrecta ? "✔" : "✖";
+  $("resTexto").textContent = esCorrecta ? "¡Correcto!" : (elegida === -1 ? "¡Se acabó el tiempo!" : "Incorrecto");
+  $("resPuntos").textContent = esCorrecta ? `+${ganados}` : `Respuesta: ${q.o[q.correcta]}`;
+  $("resRacha").textContent = racha >= 2 ? `🔥 Racha de ${racha}` : "";
+
+  setTimeout(() => {
+    r.className = "resultado";
+    actual++;
+    if (actual < preguntas.length) cargarPregunta();
+    else terminar();
+  }, 2200);
+}
+
+// ====== 6. PANTALLA FINAL ======
+function terminar() {
+  mostrar("final");
+  $("finNombre").textContent = jugador;
+  $("finPuntos").textContent = `${puntos} pts`;
+  $("finAciertos").textContent = `${aciertos} de ${preguntas.length} correctas`;
+  const pct = aciertos / preguntas.length;
+  $("finMensaje").textContent =
+    pct === 1 ? "🏆 ¡Perfecto!" : pct >= .7 ? "🥈 ¡Muy bien!" : pct >= .5 ? "🥉 Bien, puedes mejorar" : "📚 ¡A repasar el tema!";
+  $("resumen").innerHTML = historial.map((h, i) =>
+    `<li>${h.ok ? "✅" : "❌"} <b>${i + 1}.</b> ${h.p}${h.ok ? "" : `<br><small>Correcta: ${h.correcta}</small>`}</li>`
+  ).join("");
+}
+
+// Permitir iniciar con Enter
+$("nombre").addEventListener("keydown", e => { if (e.key === "Enter") iniciar(); });
+</script>
+</body>
+</html>
